@@ -1,0 +1,82 @@
+version: "3"
+
+services:
+  # ======================
+  # Nats
+  # ======================
+  nats-server:
+    image: nats:latest
+
+  # ======================
+  # Client Gateway
+  # ======================
+  client-gateway:
+    build:
+      context: ./client-gateway
+      dockerfile: dockerfile.prod
+    image: client-gateway-prod
+    ports:
+      - ${CLIENT_GATEWAY_PORT}:${CLIENT_GATEWAY_PORT}
+    environment:
+      - PORT=${CLIENT_GATEWAY_PORT}
+      - NATS_SERVERS=nats://nats-server:4222
+
+  # ======================
+  # Auth MS
+  # ======================
+  auth-ms:
+    build:
+      context: ./auth-ms
+      dockerfile: dockerfile.prod
+    image: auth-ms-prod
+    environment:
+      - PORT=3000
+      - NATS_SERVERS=nats://nats-server:4222
+      - DATABASE_URL=${AUTH_DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+
+  # ======================
+  # Products MS
+  # ======================
+  products-microservice:
+    build:
+      context: ./products-microservice
+      dockerfile: dockerfile.prod
+    image: products-ms-prod
+    environment:
+      - PORT=3000
+      - NATS_SERVERS=nats://nats-server:4222
+      - DATABASE_URL=file:./dev.db
+
+  # ======================
+  # Orders MS
+  # ======================
+  orders-ms:
+    build:
+      context: ./orders-ms
+      dockerfile: dockerfile.prod
+      args:
+        - ORDERS_DB_URL=${ORDERS_DB_URL}
+    image: orders-ms-prod
+    environment:
+      - PORT=3000
+      - DATABASE_URL=${ORDERS_DB_URL}
+      - NATS_SERVERS=nats://nats-server:4222
+
+  # ======================
+  # Payments ms
+  # ======================
+  payments-ms:
+    build:
+      context: ./payments-ms
+      dockerfile: dockerfile.prod
+    image: payments-ms-prod
+    ports:
+      - ${PAYMENTS_MS_PORT}:${PAYMENTS_MS_PORT}
+    environment:
+      - PORT=${PAYMENTS_MS_PORT}
+      - NATS_SERVERS=nats://nats-server:4222
+      - STRIPE_SECRET=${STRIPE_SECRET}
+      - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL}
+      - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL}
+      - STRIPE_ENDPOINTSECRET=${STRIPE_ENDPOINTSECRET}
